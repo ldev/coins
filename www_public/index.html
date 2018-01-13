@@ -1,0 +1,265 @@
+
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>coins.tard.no! Turdytardy!</title>
+        <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+        <script src="https://code.highcharts.com/highcharts.js"></script>
+        <script src="https://code.highcharts.com/modules/exporting.js"></script>
+        <script src="/dark.theme.js"></script>
+        <style type="text/css">
+            *{
+                margin: 0;
+                padding: 0;
+            }
+            
+            body, html{
+                background-color: #222;
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+            }
+            #all_containers{
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+            }
+            
+            .pair_group{
+                margin-top: 10px;
+                padding-top: 10px;
+                border-top: 1px solid #fff;
+            }
+            #all_containers :first-child{
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                border: 0 !important;
+            }
+            
+            .graph, .graph_small{
+                box-sizing: border-box;
+            }
+            
+            .graph{
+                width: 75%;
+            }
+            
+            .graph_small{
+                width: 24%;
+                display: block;
+                float: right;
+            }
+        
+        </style>
+    </head>
+    <body>
+        <div id="all_containers"></div>
+        <script>
+            $(document).ready(function(){
+
+                load_coins = ['BNB/BTC', 'LTC/BTC', 'VIBE/BTC']
+
+                //
+                // HighChart settings
+                //
+                var options_reference = {
+                    chart: {
+                        renderTo: null, // will be updated by perform_ajax_call()
+                        type: 'spline',
+                        zoomType: 'x'
+                    },
+                    title: {
+                        text: null
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        // Convert unix timestamp (int 10) to javascript timestamp (unix timestamp in milliseconds)
+                        labels: {
+                            formatter: function(){
+                                return Highcharts.dateFormat('%Y-%m-%d %H:%I', this.value*1000);
+                            },
+                            // rotation: 90
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: null, // will be updated by perform_ajax_call()
+                            style: {
+                                'font-size': '30px'
+                            }
+                        }
+                    },
+                    tooltip: {
+                        crosshairs: true,
+                    },
+                    credits: {
+                        enabled: false
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    exporting: {
+                        enabled: false
+                    },
+                    series: []
+                };
+                
+                //
+                // HighChart settings
+                //
+                var options_reference_small = {
+                    chart: {
+                        renderTo: null, // will be updated by perform_ajax_call()
+                        type: 'spline'
+                    },
+                    title: {
+                        text: null
+                    },
+                    xAxis: {
+                        type: 'datetime',
+                        // Convert unix timestamp (int 10) to javascript timestamp (unix timestamp in milliseconds)
+                        labels: {
+                            formatter: function(){
+                                return Highcharts.dateFormat('%H:%I', this.value*1000);
+                            },
+                            // rotation: 90
+                        }
+                    },
+                    yAxis: {
+                        title: {
+                            text: null
+                        }
+                    },
+                    tooltip: {
+                        crosshairs: true,
+                    },
+                    credits: {
+                        enabled: false
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    exporting: {
+                        enabled: false
+                    },
+                    series: []
+                };
+                
+                
+                
+                //
+                // Highchart color lols - loaded from separate js file
+                //
+                Highcharts.setOptions(Highcharts.theme);
+                
+                
+
+                //
+                // AJAX call settings - to be dynamically edited
+                //
+                var ajax_options = {
+                    url: 'api.json.php',
+                    method: 'GET',
+                    data: {},
+                    dataType: 'json',
+                    cache: false
+                }
+
+                
+                //
+                // Create_container
+                //
+                function create_container(coin){
+                    console.log('called create_container(' + coin + ')')
+                    var l = load_coins.length;
+                    var h = 100/l
+                    //
+                    // Calculate height of div. height = (100 / number of coins)%
+                    //
+                    
+                    
+                    $('div#all_containers').append('' + 
+                    '<div class="pair_group" id="pair_group_' + coin + '" style="height: ' + h + '%">' +
+                    '   <div class="graph_small" id="pair_' + coin + '_small">test</div>' +
+                    '   <div class="graph" id="pair_' + coin + '"></div>' +
+                    '</div>');
+                }
+
+                //
+                // Perform AJAX call
+                //
+                function perform_ajax_call(coin){
+                    // Clone options_reference so we can manipulate objects independently
+                    var highchart_options_local = JSON.parse(JSON.stringify(options_reference));
+                    var highchart_options_local_small = JSON.parse(JSON.stringify(options_reference_small));
+                    var ajax_options_local = JSON.parse(JSON.stringify(ajax_options));
+                    var ajax_options_local_small = JSON.parse(JSON.stringify(ajax_options));
+                    
+                    // Create HTML container
+                    create_container(coin)
+                    
+                    // Set trade pairs to fetch
+                    ajax_options_local.data = {
+                        'symbol': coin
+                    }
+                    
+                    //
+                    // Fetch content for large graphs
+                    //
+                    $.ajax(ajax_options_local).done(function(content){
+                        if(content.status == 'success'){
+                            serie = {
+                                name: coin,
+                                data: content.data
+                            }
+                            highchart_options_local.yAxis.title.text = coin
+                            highchart_options_local.chart.renderTo = 'pair_' + coin
+                            highchart_options_local.series.push(serie)
+                            var chart = new Highcharts.Chart(highchart_options_local);
+                            
+                        }else{
+                            alert('Local API error');
+                        }
+                    });
+                    
+                    //
+                    // Fetch content for small graphs
+                    //
+                    ajax_options_local_small.data = {
+                        'duration': '1h',
+                        'symbol': coin
+                    }
+                    
+                    
+
+                    $.ajax(ajax_options_local_small).done(function(content){
+                        if(content.status == 'success'){
+                            serie = {
+                                name: coin,
+                                data: content.data
+                            }
+                            highchart_options_local_small.chart.renderTo = 'pair_' + coin + '_small'
+                            highchart_options_local_small.series.push(serie)
+                            var chart = new Highcharts.Chart(highchart_options_local_small);
+                            
+                        }else{
+                            alert('Local API error');
+                        }
+                    });
+                    
+                }
+                
+                //
+                // Iterate over coins to create graphs
+                //
+                var load_coins_length = load_coins.length;
+                for(var i = 0; i < load_coins_length; i++){
+                    perform_ajax_call(load_coins[i]);
+                }
+
+
+            });
+        </script>
+    </body>
+</html>
